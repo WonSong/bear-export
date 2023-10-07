@@ -32,7 +32,7 @@ def main():
 def retrieve_bear_notes():
     db_url = f"{settings['bear_base_url']}{settings['bear_sqlite_name']}"
     connection = sqlite3.connect(db_url)
-    query = "SELECT notes.Z_PK, notes.ZTITLE, notes.ZTEXT FROM ZSFNOTE AS notes"
+    query = "SELECT notes.Z_PK, notes.ZTITLE, notes.ZTEXT FROM ZSFNOTE AS notes WHERE notes.ZTRASHED = false"
     cursor = connection.cursor()
     cursor.execute(query)
     notes = cursor.fetchall()
