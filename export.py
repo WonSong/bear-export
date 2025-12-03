@@ -4,12 +4,12 @@ import os
 import re
 
 settings = {
-    'bear_base_url': '/Users/won/Library/Group Containers/9K33E3U3T4.net.shinyfrog.bear/Application Data/',
+    'bear_base_url': os.path.expanduser('~/Library/Group Containers/9K33E3U3T4.net.shinyfrog.bear/Application Data/'),
     'bear_sqlite_name': 'database.sqlite',
     'assets_folder': 'Local Files/',
     'files_folder': 'Note Files/',
     'images_folder': 'Note Images/',
-    'output_folder': '/Users/won/Workspace/NoteArchive/backup/',
+    'output_folder': os.path.expanduser('~/Workspace/notes-backup/'),
     'output_assets_folder': 'assets/'
 }
 
@@ -67,6 +67,13 @@ def write_asset_files(files):
         shutil.copyfile(file_path, f"{dest}/{file[2]}")
 
 
+def extract_tags(note_text):
+    """Extract tags from note text. Tags start with # and can be nested with /."""
+    tag_pattern = r'#([a-zA-Z0-9_]+(?:/[a-zA-Z0-9_]+)*)'
+    tags = re.findall(tag_pattern, note_text)
+    return tags
+
+
 def update_notes_with_file_info(notes):
     result = []
     pattern = r'(!?\[(?:[^\]]*?)\]\(((?!https?://)[^\)]+?)\))'
@@ -83,9 +90,12 @@ def update_notes_with_file_info(notes):
             return whole_match.replace(link_url, new_url)
 
         note_text = re.sub(pattern, replace, note_text)
+        tags = extract_tags(note_text)
+        
         result.append({
             'title': note[1],
-            'text': note_text
+            'text': note_text,
+            'tags': tags
         })
 
     return result
@@ -93,8 +103,22 @@ def update_notes_with_file_info(notes):
 
 def write_note_files(notes):
     for note in notes:
-        with open(f"{settings['output_folder']}{note['title']}.md", 'w') as file:
-            file.write(note['text'])
+        tags = note.get('tags', [])
+        
+        if not tags:
+            # If no tags, write to root folder
+            file_path = f"{settings['output_folder']}{note['title']}.md"
+            with open(file_path, 'w') as file:
+                file.write(note['text'])
+        else:
+            # Write note to each tag folder
+            for tag in tags:
+                tag_folder = os.path.join(settings['output_folder'], tag)
+                os.makedirs(tag_folder, exist_ok=True)
+                
+                file_path = os.path.join(tag_folder, f"{note['title']}.md")
+                with open(file_path, 'w') as file:
+                    file.write(note['text'])
 
 
 if __name__ == "__main__":
