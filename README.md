@@ -20,7 +20,7 @@ python3 export.py
 
 ## Automated Export (LaunchAgent)
 
-Schedule automatic exports every 30 seconds using the `schedule.sh` script with macOS LaunchAgent.
+Schedule automatic exports every 5 minutes using the `schedule.sh` script with macOS LaunchAgent.
 
 ### One-Time Setup: Grant Python Full Disk Access
 
@@ -39,7 +39,7 @@ To avoid permission prompts, Python needs access to Bear's database:
 ./schedule.sh start
 ```
 
-This installs a LaunchAgent that runs the export every 30 seconds. Export logs are written to `export.log`.
+This installs a LaunchAgent that runs the export every 5 minutes. Export logs are written to `export.log`.
 
 ### Stop Automated Export
 

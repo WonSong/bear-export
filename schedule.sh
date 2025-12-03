@@ -27,7 +27,7 @@ create_plist() {
     <key>WorkingDirectory</key>
     <string>$SCRIPT_DIR</string>
     <key>StartInterval</key>
-    <integer>30</integer>
+    <integer>300</integer>
     <key>StandardOutPath</key>
     <string>$LOG_PATH</string>
     <key>StandardErrorPath</key>
@@ -45,7 +45,7 @@ install_launcher() {
     launchctl load "$PLIST_PATH"
     
     echo "✓ LaunchAgent installed successfully"
-    echo "Bear notes will be exported every 30 seconds"
+    echo "Bear notes will be exported every 5 minutes"
     echo "Logs will be written to: $LOG_PATH"
 }
 
@@ -88,7 +88,7 @@ case "$1" in
         ;;
     *)
         echo "Usage: $0 {start|stop|status}"
-        echo "  start  - Install LaunchAgent to export Bear notes every 30 seconds"
+        echo "  start  - Install LaunchAgent to export Bear notes every 5 minutes"
         echo "  stop   - Remove the LaunchAgent"
         echo "  status - Check if LaunchAgent is running"
         exit 1
