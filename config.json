@@ -1,0 +1,10 @@
+{
+    "bear_base_url": "~/Library/Group Containers/9K33E3U3T4.net.shinyfrog.bear/Application Data/",
+    "bear_sqlite_name": "database.sqlite",
+    "assets_folder": "Local Files/",
+    "files_folder": "Note Files/",
+    "images_folder": "Note Images/",
+    "output_folder": "~/Workspace/Notes/",
+    "output_assets_folder": "assets/"
+}
+

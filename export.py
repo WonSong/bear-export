@@ -2,16 +2,17 @@ import sqlite3
 import shutil
 import os
 import re
+import json
+from datetime import datetime, timedelta
 
-settings = {
-    'bear_base_url': os.path.expanduser('~/Library/Group Containers/9K33E3U3T4.net.shinyfrog.bear/Application Data/'),
-    'bear_sqlite_name': 'database.sqlite',
-    'assets_folder': 'Local Files/',
-    'files_folder': 'Note Files/',
-    'images_folder': 'Note Images/',
-    'output_folder': os.path.expanduser('~/Workspace/notes-backup/'),
-    'output_assets_folder': 'assets/'
-}
+# Load settings from config file
+config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+with open(config_path, 'r') as f:
+    settings = json.load(f)
+
+# Expand user paths
+settings['bear_base_url'] = os.path.expanduser(settings['bear_base_url'])
+settings['output_folder'] = os.path.expanduser(settings['output_folder'])
 
 
 def main():
@@ -32,7 +33,7 @@ def main():
 def retrieve_bear_notes():
     db_url = f"{settings['bear_base_url']}{settings['bear_sqlite_name']}"
     connection = sqlite3.connect(db_url)
-    query = "SELECT notes.Z_PK, notes.ZTITLE, notes.ZTEXT FROM ZSFNOTE AS notes WHERE notes.ZTRASHED = false"
+    query = "SELECT notes.Z_PK, notes.ZTITLE, notes.ZTEXT, notes.ZCREATIONDATE, notes.ZMODIFICATIONDATE FROM ZSFNOTE AS notes WHERE notes.ZTRASHED = false"
     cursor = connection.cursor()
     cursor.execute(query)
     notes = cursor.fetchall()
@@ -69,9 +70,18 @@ def write_asset_files(files):
 
 def extract_tags(note_text):
     """Extract tags from note text. Tags start with # and can be nested with /."""
-    tag_pattern = r'#([a-zA-Z0-9_]+(?:/[a-zA-Z0-9_]+)*)'
-    tags = re.findall(tag_pattern, note_text)
+    # Require whitespace or start of line before #, exclude URL anchors
+    tag_pattern = r'(?:^|(?<=\s))#([a-zA-Z0-9_]+(?:/[a-zA-Z0-9_]+)*)(?=\s|$)'
+    tags = re.findall(tag_pattern, note_text, re.MULTILINE)
     return tags
+
+
+def convert_core_data_timestamp(timestamp):
+    """Convert Core Data timestamp to datetime. Core Data uses 2001-01-01 as reference."""
+    if timestamp is None:
+        return None
+    reference_date = datetime(2001, 1, 1)
+    return reference_date + timedelta(seconds=timestamp)
 
 
 def update_notes_with_file_info(notes):
@@ -81,6 +91,8 @@ def update_notes_with_file_info(notes):
     for note in notes:
         note_text = note[2]
         note_id = note[0]
+        created_timestamp = note[3]
+        modified_timestamp = note[4]
 
         def replace(match):
             whole_match = match.group(1)
@@ -95,7 +107,9 @@ def update_notes_with_file_info(notes):
         result.append({
             'title': note[1],
             'text': note_text,
-            'tags': tags
+            'tags': tags,
+            'created': convert_core_data_timestamp(created_timestamp),
+            'modified': convert_core_data_timestamp(modified_timestamp)
         })
 
     return result
@@ -105,11 +119,25 @@ def write_note_files(notes):
     for note in notes:
         tags = note.get('tags', [])
         
+        # Build metadata section
+        metadata_lines = []
+        if note.get('created'):
+            metadata_lines.append(f"Created: {note['created'].strftime('%Y-%m-%d %H:%M:%S')}")
+        if note.get('modified'):
+            metadata_lines.append(f"Modified: {note['modified'].strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        metadata = '\n'.join(metadata_lines)
+        
+        # Prepend metadata to note content
+        content = note['text']
+        if metadata:
+            content = f"{metadata}\n\n---\n\n{content}"
+        
         if not tags:
             # If no tags, write to root folder
             file_path = f"{settings['output_folder']}{note['title']}.md"
             with open(file_path, 'w') as file:
-                file.write(note['text'])
+                file.write(content)
         else:
             # Write note to each tag folder
             for tag in tags:
@@ -118,7 +146,7 @@ def write_note_files(notes):
                 
                 file_path = os.path.join(tag_folder, f"{note['title']}.md")
                 with open(file_path, 'w') as file:
-                    file.write(note['text'])
+                    file.write(content)
 
 
 if __name__ == "__main__":
